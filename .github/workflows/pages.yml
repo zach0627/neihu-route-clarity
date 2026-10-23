@@ -8,20 +8,22 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: snapshot = deploy committed data; daily = download history and recompute; live = one 15-minute live check
+        description: snapshot = deploy committed data; daily = download history and recompute; live = one live check
         type: choice
         options: [snapshot, daily, live]
         default: snapshot
+      live_minutes:
+        description: Live check length in minutes (2 for a quick manual verification; schedules always use 15)
+        type: choice
+        options: ['2', '15']
+        default: '15'
   schedule:
     - cron: '0 2 * * 1-5'            # 10:00 Taipei, after TDX publishes yesterday's history: rolling 30-day snapshot
     - cron: '0,15,30,45 23 * * 0-4'  # 07:00–07:45 Taipei, Mon–Fri: live 15-minute checks
     - cron: '0,15,30,45 0 * * 1-5'   # 08:00–08:45 Taipei
     - cron: '0,15 1 * * 1-5'         # 09:00–09:15 Taipei (each run polls 15 minutes, so the last check ends 09:30)
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: {}
 
 concurrency:
   group: pages
@@ -31,12 +33,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    permissions:
+      contents: read
     env:
-      TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
-      TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+      HAS_TDX_CREDENTIALS: ${{ secrets.TDX_CLIENT_ID != '' && secrets.TDX_CLIENT_SECRET != '' }}
       MODE: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 2 * * 1-5' && 'daily' || 'live') || inputs.mode || 'snapshot' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -48,11 +54,20 @@ jobs:
           path: research
           key: research-v1-${{ github.run_id }}
           restore-keys: research-v1-
+      - name: Restore latest live data
+        uses: actions/cache/restore@v4
+        with:
+          path: data/live.json
+          key: live-v1-${{ github.run_id }}
+          restore-keys: live-v1-
       - name: Download history and recompute the snapshot
-        if: env.MODE == 'daily' && env.TDX_CLIENT_ID != ''
+        if: env.MODE == 'daily' && env.HAS_TDX_CREDENTIALS == 'true'
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
         run: node scripts/update.mjs --no-raw
       - name: Save downloaded history
-        if: env.MODE == 'daily' && env.TDX_CLIENT_ID != ''
+        if: env.MODE == 'daily' && env.HAS_TDX_CREDENTIALS == 'true'
         uses: actions/cache/save@v4
         with:
           path: research
@@ -60,11 +75,26 @@ jobs:
       - name: Recompute from cached history
         if: env.MODE != 'daily' && hashFiles('research/*-download-manifest.json') != ''
         run: node scripts/aggregate.mjs
-      - name: Live 15-minute check
-        if: env.MODE == 'live' && env.TDX_CLIENT_ID != ''
-        run: node scripts/live-update.mjs --minutes 15
+      - name: Live traffic check
+        if: env.MODE == 'live' && env.HAS_TDX_CREDENTIALS == 'true'
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+          LIVE_MINUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'live' && inputs.live_minutes || '15' }}
+        run: node scripts/live-update.mjs --minutes "$LIVE_MINUTES"
       - run: npm test
       - run: npm run build:pages
+      - name: Scan published files and tracked source for credentials
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+        run: node scripts/security-check.mjs
+      - name: Save latest verified live data
+        if: env.MODE == 'live' && env.HAS_TDX_CREDENTIALS == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/live.json
+          key: live-v1-${{ github.run_id }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist-pages
@@ -72,6 +102,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

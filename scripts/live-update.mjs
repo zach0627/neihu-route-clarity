@@ -3,8 +3,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { analyzeRecord, congestionLevel, CONGESTED_LEVELS, SPEED_WINDOW_MINUTES, representativeDirections } from '../lib/ranking.mjs';
+import { analyzeRecord, CONGESTED_LEVELS, representativeDirections } from '../lib/ranking.mjs';
 import { buildFlexRecommendations, liveUpdate, minuteText, parseMinute, JAM_SHARE, CHECK_INTERVAL_MINUTES } from '../lib/flex.mjs';
+import { freshLiveMinute, liveObservationWindow, liveWindowLevels } from '../lib/live-window.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const API = 'https://tdx.transportdata.tw/api/basic/v2/Road/Traffic';
@@ -47,15 +48,17 @@ try {
   const series = new Map();
   for (let poll = 0; poll < minutes; poll++) {
     const started = Date.now();
-    for (const raw of (await get(liveUrl)).VDLives ?? []) {
+    const feed = await get(liveUrl);
+    const polledAt = Date.now();
+    for (const raw of feed.VDLives ?? []) {
       if (!stations.has(raw.VDID)) continue;
       // The live API names the lane quality code ErrorType (one string); the historical API calls it ErrorDiags (an array).
       // Both are documented by TDX as 車道內車流偵測資訊異常類型代碼, so the live value is wrapped to reuse the same rule.
       const record = { ...raw, LinkFlows: (raw.LinkFlows ?? []).map((flow) => ({ ...flow, Lanes: (flow.Lanes ?? []).map(({ ErrorType, ...lane }) => ({ ...lane, ErrorDiags: lane.ErrorDiags ?? (ErrorType != null ? [ErrorType] : undefined) })) })) };
-      const stamp = Date.parse(record.DataCollectTime); if (!Number.isFinite(stamp)) continue;
+      const minute = freshLiveMinute(record.DataCollectTime, polledAt); if (minute == null) continue;
       for (const direction of analyzeRecord(record, stations.get(record.VDID)).directions) {
         if (!series.has(direction.id)) series.set(direction.id, new Map());
-        const minute = taipei(stamp).minute, existing = series.get(direction.id).get(minute);
+        const existing = series.get(direction.id).get(minute);
         if (!existing) series.get(direction.id).set(minute, direction);
         else if (existing.fingerprint !== direction.fingerprint) series.get(direction.id).set(minute, { ...existing, valid: false, speed: null });
       }
@@ -63,39 +66,36 @@ try {
     console.log(`poll ${poll + 1}/${minutes}: ${series.size} directions`);
     if (poll < minutes - 1) await delay(Math.max(13000, intervalMs - (Date.now() - started)));
   }
+  const endedAt = Date.now();
+  const window = liveObservationWindow([...series.values()].flatMap(map => [...map.keys()]), endedAt);
   const levelsFor = (direction) => reference.congestionLevels.find((item) => item.CongestionLevelID === direction.geometry?.congestionLevelId)?.Levels ?? null;
-  const recentLevels = (direction) => {
-    const minutesMap = series.get(direction.id); const levels = levelsFor(direction);
-    if (!minutesMap || !levels) return [];
-    return [...minutesMap.keys()].sort((a, b) => a - b).map((minute) => {
-      const own = minutesMap.get(minute); if (!own?.valid) return null;
-      let weight = 0, total = 0;
-      for (let back = 0; back < SPEED_WINDOW_MINUTES; back++) { const earlier = minutesMap.get(minute - back); if (earlier?.valid && earlier.speed != null) { weight += earlier.speedVolume; total += earlier.speed * earlier.speedVolume; } }
-      return weight ? { minute, speed: total / weight, level: congestionLevel(total / weight, levels) } : null;
-    }).filter(Boolean);
-  };
-  const allMinutes = [...series.values()].flatMap((map) => [...map.keys()]);
-  const now = taipei(Date.now());
+  const recentLevels = (direction) => liveWindowLevels(series.get(direction.id), levelsFor(direction), window);
+  const now = taipei(endedAt);
+  const inWindow = now.minute >= 420 && now.minute < 570;
   const checkMinute = Math.floor(now.minute / CHECK_INTERVAL_MINUTES) * CHECK_INTERVAL_MINUTES;
   const segments = representativeDirections(snapshot.directions).map((direction) => {
-    const levels = recentLevels(direction).slice(-CHECK_INTERVAL_MINUTES);
+    const levels = recentLevels(direction);
     const classified = levels.filter((item) => item.level != null), jam = classified.filter((item) => CONGESTED_LEVELS.includes(item.level));
     const latest = levels.at(-1);
-    return { id: direction.id, vdId: direction.vdId, roadName: direction.roadName, bearing: direction.bearing, category: direction.scope.category, minutes: classified.length, latestMinute: latest ? minuteText(latest.minute) : null, latestSpeed: latest ? Math.round(latest.speed * 10) / 10 : null, latestLevel: latest?.level ?? null, share15: classified.length ? jam.length / classified.length : null, jammed15: classified.length > 0 && jam.length / classified.length >= JAM_SHARE };
+    return { id: direction.id, vdId: direction.vdId, roadName: direction.roadName, bearing: direction.bearing, category: direction.scope.category, minutes: classified.length, latestMinute: latest ? minuteText(latest.minute) : null, latestSpeed: latest ? Math.round(latest.speed * 10) / 10 : null, latestLevel: latest?.level ?? null, share15: classified.length ? jam.length / classified.length : null, jammed15: classified.length >= CHECK_INTERVAL_MINUTES && jam.length / classified.length >= JAM_SHARE };
   });
   const companies = (snapshot.companies?.list ?? []).map((company) => {
     const baselineMinute = parseMinute(snapshot.companies.defaults?.baselineStart ?? '08:30');
     const recommendations = buildFlexRecommendations(company.location, snapshot.directions, snapshot.coverage.availableDates, { baselineMinute });
     return { id: company.id, baselineStart: minuteText(baselineMinute), checkTime: minuteText(checkMinute), directions: recommendations.map((rec) => {
       if (!rec.benchmark) return { key: rec.key, benchmarkId: null, historicalMinute: rec.recommendedMinute, recommendedMinute: rec.recommendedMinute, jammed: false, share: null };
-      const update = liveUpdate(rec.recommendedMinute, checkMinute, recentLevels(rec.benchmark).map((item) => item.level));
+      const levels = recentLevels(rec.benchmark).map(item => item.level).filter(level => level != null);
+      const update = inWindow && levels.length >= CHECK_INTERVAL_MINUTES
+        ? liveUpdate(rec.recommendedMinute, checkMinute, levels)
+        : { recommendedMinute: rec.recommendedMinute, jammed: false, share: null };
       return { key: rec.key, benchmarkId: rec.benchmark.id, historicalMinute: rec.recommendedMinute, recommendedMinute: update.recommendedMinute, jammed: update.jammed, share: update.share };
     }) };
   });
   const live = {
-    generatedAt: new Date().toISOString(), date: now.date,
-    from: allMinutes.length ? minuteText(Math.min(...allMinutes)) : null, to: allMinutes.length ? minuteText(Math.max(...allMinutes)) : null,
-    inWindow: now.minute >= 420 && now.minute <= 570, polls: minutes,
+    generatedAt: new Date(endedAt).toISOString(), date: now.date,
+    sourceFrom: window?.sourceFrom ?? null, sourceTo: window?.sourceTo ?? null,
+    from: window ? minuteText(taipei(Date.parse(window.sourceFrom)).minute) : null, to: window ? minuteText(taipei(Date.parse(window.sourceTo)).minute) : null,
+    inWindow, polls: minutes,
     rule: `近 ${CHECK_INTERVAL_MINUTES} 分鐘有 ${JAM_SHARE * 100}% 以上分鐘為 ${CONGESTED_LEVELS.map((level) => 'ABCDEF'[level - 1]).join('、')} 級，視為塞車未解除；當天最晚彈性上班 = max(歷史建議, 檢查時間 + ${CHECK_INTERVAL_MINUTES} 分鐘)。`,
     sources: [staticUrl, liveUrl].map((url) => url.replace('?%24format=JSON', '')),
     segments, companies,

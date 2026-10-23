@@ -18,12 +18,32 @@ const walk = async (dir) => {
   }
   return files;
 };
-const check = async (file) => {
-  const content = await readFile(file);
+const checkContent = (content, location) => {
   for (const [key, secret] of Object.entries(credentials)) {
-    if (secret.length >= 8 && content.includes(Buffer.from(secret))) throw new Error(`${file} contains a local credential (${key}; value redacted)`);
+    if (secret.length >= 8 && content.includes(Buffer.from(secret))) throw new Error(`${location} contains a local credential (${key}; value redacted)`);
   }
-  if (/Bearer\s+eyJ[A-Za-z0-9_-]{20}/.test(content.toString())) throw new Error(`${file} contains a possible access token`);
+  if (/Bearer\s+eyJ[A-Za-z0-9_-]{20}/.test(content.toString())) throw new Error(`${location} contains a possible access token`);
+};
+const check = async (file) => checkContent(await readFile(file), file);
+const isPrivateEnvironment = (file) => /(^|\/)\.env(?:\.|$)/.test(file) && !file.endsWith('.env.example');
+const historyGit = (args, options = {}) => {
+  try { return execFileSync('git', args, { stdio: 'pipe', maxBuffer: 128 * 1024 * 1024, ...options }); }
+  catch { throw new Error('Unable to inspect Git history safely'); }
+};
+const checkHistory = () => {
+  const ids = historyGit(['rev-list', '--objects', '--all', '--no-object-names'], { encoding: 'utf8' });
+  if (!ids.trim()) return;
+  const objects = historyGit(['cat-file', '--batch-check'], { input: ids, encoding: 'utf8' }).trim().split('\n').map((line) => line.split(' '));
+  for (const [id, type] of objects) {
+    if (type !== 'tree') continue;
+    const entries = historyGit(['ls-tree', '-z', id], { encoding: 'utf8' }).split('\0').filter(Boolean);
+    if (entries.some((entry) => isPrivateEnvironment(entry.slice(entry.indexOf('\t') + 1)))) {
+      throw new Error(`A private environment file exists in Git history (Git object ${id})`);
+    }
+  }
+  for (const [id, type] of objects) {
+    if (type === 'blob') checkContent(historyGit(['cat-file', 'blob', id]), `Git object ${id}`);
+  }
 };
 let files = [];
 for (const out of ['dist', 'dist-pages']) {
@@ -37,11 +57,12 @@ try {
     catch { throw new Error(`Git ignore does not protect ${privateFile}`); }
   }
   const tracked = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean);
-  if (tracked.some((f) => /(^|\/)\.env(?:\.|$)/.test(f) && !f.endsWith('.env.example'))) throw new Error('A private environment file is already tracked by Git');
+  if (tracked.some(isPrivateEnvironment)) throw new Error('A private environment file is already tracked by Git');
   const visible = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean);
   for (const file of visible) { try { await check(file); } catch (error) { if (error.code !== 'ENOENT') throw error; } }
+  checkHistory();
   const exactScan = Object.values(credentials).filter((value) => value.length >= 8).length;
-  console.log(`Security check passed: ${files.length} built file(s) in dist and dist-pages, Git-visible source files, and ignore rules. ${exactScan ? `Exact matching against ${exactScan} local credential values performed.` : 'No local credentials configured; token patterns and ignore rules checked only.'}`);
+  console.log(`Security check passed: ${files.length} built file(s) in dist and dist-pages, Git-visible source files, all Git refs and history, and ignore rules. ${exactScan ? `Exact matching against ${exactScan} local credential values performed.` : 'No local credentials configured; token patterns and ignore rules checked only.'}`);
 } catch (error) {
   if (error.status === 128) throw new Error('Initialize the local Git repository before validating ignore protection');
   throw error;

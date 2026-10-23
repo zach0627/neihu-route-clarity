@@ -3,6 +3,7 @@ import snapshot from '../data/dashboard.json';
 import { buildRankings, buildObservedRankings, buildCongestionRankings, representativeDirections, CONGESTED_LEVELS, SEVERE_LEVEL, SPEED_WINDOW_MINUTES } from '../lib/ranking.mjs';
 import { buildFlexRecommendations, minuteText, parseMinute, SECTORS, CANDIDATE_RADIUS_METERS } from '../lib/flex.mjs';
 import { heatmapRows, parkPeriods, dailySeries, weekdaySeries, WEEKDAYS } from '../lib/dashboard.mjs';
+import { liveDisplayState } from '../lib/live.mjs';
 
 const nf = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 1 });
 const rateFormatter = new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -318,13 +319,28 @@ function DashboardPage({ data, dates, onInspect, onNavigate }) {
 }
 
 function LivePanel({ live, company, flex, onNavigate }) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (!LIVE_MODE) return undefined;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   if (!LIVE_MODE) return <div className="coverage-note live-note"><div className="notice-symbol"><Icon name="clock" size={20} /></div><div><strong>這是離線示範版，顯示歷史資料快照</strong><p>部署到 GitHub Pages 的版本，會由 GitHub Actions 在平日 07:00–09:30 每 15 分鐘呼叫 TDX 即時 API，更新目前塞車路段與當天的彈性上班建議；每天早上另外下載前一天的歷史資料重算排名。</p></div><button className="text-button" onClick={() => onNavigate('flex')}>15 分鐘更新怎麼做 <Icon size={16} /></button></div>;
   if (!live) return <div className="coverage-note live-note"><div className="notice-symbol"><Icon name="clock" size={20} /></div><div><strong>即時資料尚未產生</strong><p>平日 07:00–09:30 每 15 分鐘更新一次；目前顯示歷史快照。</p></div></div>;
-  const jammed = (live.segments || []).filter(segment => segment.jammed15).sort((a, b) => b.share15 - a.share15);
+  const state = liveDisplayState(live, now);
+  const jammed = state.jammedSegments;
+  const partial = !state.hasFullPolls || !state.completeSegments.length;
   const liveCompany = (live.companies || []).find(item => item.id === company?.id);
-  return <section className="section-block dashboard-card live-panel" aria-labelledby="live-panel-heading"><div className="section-heading ranking-heading"><div><div className="eyebrow">LIVE · 每 15 分鐘</div><h2 id="live-panel-heading">即時狀態</h2><p>更新於 {new Date(live.generatedAt).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })}；資料 {live.from ? `${live.from}–${live.to}` : '—'}（臺北時間），{live.inWindow ? '早尖峰時段內' : '不在 07:00–09:30，僅供檢查'}。</p></div><Badge tone={jammed.length ? 'orange' : 'teal'}>{jammed.length} 個路段近 15 分鐘過半塞車</Badge></div>
-    <div className="dashboard-two dashboard-two-inner"><div><h3 className="chart-title">近 15 分鐘塞車的往園區路段</h3>{jammed.length ? <ol className="top-list">{jammed.slice(0, 8).map(segment => <li key={segment.id}><span>{segment.roadName} {bearingNames[segment.bearing] || segment.bearing}</span><i style={{ width: `${segment.share15 * 100}%`, background: heat(segment.share15) }} /><strong>{percentText(segment.share15)}</strong></li>)}</ol> : <p className="small-note">目前沒有往園區路段在近 15 分鐘過半時間塞車。</p>}</div>
-      <div><h3 className="chart-title">{company?.shortName}今日彈性上班（即時規則）</h3><div className="table-scroll"><table className="data-table"><thead><tr><th scope="col">方向</th><th scope="col">歷史建議</th><th scope="col">今日即時</th></tr></thead><tbody>{flex.map(rec => { const now = liveCompany?.directions?.find(item => item.key === rec.key); return <tr key={rec.key}><td>{rec.name}</td><td>{minuteText(rec.recommendedMinute)}</td><td><strong>{now ? minuteText(now.recommendedMinute) : '—'}</strong><span className="cell-sub">{now ? (now.jammed ? `基準路段近 15 分鐘 ${percentText(now.share)} 塞車，延後` : '基準路段未過半塞車，維持') : '無資料'}</span></td></tr>; })}</tbody></table></div></div></div></section>;
+  const generated = Number.isFinite(Date.parse(live.generatedAt)) ? new Date(live.generatedAt).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }) : '時間未提供';
+  return <section className="section-block dashboard-card live-panel" aria-labelledby="live-panel-heading"><div className="section-heading ranking-heading"><div><div className="eyebrow">{state.isCurrent ? 'LIVE · 每 15 分鐘' : 'OBSERVATION · 觀測紀錄'}</div><h2 id="live-panel-heading">{state.label}</h2><p>更新於 {generated}；觀測 {shortDate(state.date)} {state.period}（臺北時間）；{state.observationsLabel}。{!state.isCurrent && '僅供觀測參考，待完整且有效的早尖峰資料再調整彈性上班。'}</p></div><Badge tone={partial ? 'amber' : jammed.length ? 'orange' : 'teal'}>{partial ? (state.hasFullPolls ? '待完整有效分鐘' : `${state.polls}次觀測／未滿15分鐘`) : `${jammed.length} 個完整觀測路段過半塞車`}</Badge></div>
+    <div className="dashboard-two dashboard-two-inner"><div><h3 className="chart-title">{partial ? '短期驗證：路段有效分鐘' : state.isCurrent ? '近 15 分鐘塞車的往園區路段' : '觀測期間塞車的往園區路段'}</h3>{partial ? (state.observedSegments.length ? <ol className="top-list">{state.observedSegments.slice(0, 8).map(segment => <li key={segment.id}><span>{segment.roadName} {bearingNames[segment.bearing] || segment.bearing}</span><i style={{ width: `${Math.min(100, segment.minutes / 15 * 100)}%` }} /><strong>有效 {segment.minutes} 分鐘</strong></li>)}</ol> : <p className="small-note">尚無有效分級分鐘，不能判定是否塞車。</p>) : jammed.length ? <ol className="top-list">{jammed.slice(0, 8).map(segment => <li key={segment.id}><span>{segment.roadName} {bearingNames[segment.bearing] || segment.bearing}</span><i style={{ width: `${segment.share15 * 100}%`, background: heat(segment.share15) }} /><strong>{percentText(segment.share15)}（{segment.minutes} 分鐘）</strong></li>)}</ol> : <p className="small-note">完整觀測的 {state.completeSegments.length} 個路段中，沒有路段在{state.isCurrent ? '近 15 分鐘' : '觀測期間'}過半時間塞車。</p>}{!partial && state.observedSegments.length > state.completeSegments.length && <p className="small-note">另有 {state.observedSegments.length - state.completeSegments.length} 個路段未滿 15 個有效分鐘，暫不判定。</p>}</div>
+      <div><h3 className="chart-title">{company?.shortName}{state.isCurrent ? '今日彈性上班（即時規則）' : '彈性上班（觀測參考）'}</h3><div className="table-scroll"><table className="data-table"><thead><tr><th scope="col">方向</th><th scope="col">歷史建議</th><th scope="col">{state.isCurrent ? '今日即時' : '觀測狀態'}</th></tr></thead><tbody>{flex.map(rec => {
+        const update = liveCompany?.directions?.find(item => item.key === rec.key);
+        const benchmarkComplete = state.completeSegments.some(segment => segment.id === update?.benchmarkId);
+        const canAdvise = state.isCurrent && update && benchmarkComplete;
+        const note = canAdvise ? (update.jammed ? `基準路段近 15 分鐘 ${percentText(update.share)} 塞車，延後` : '基準路段未過半塞車，維持') : !state.hasFullPolls ? '短期驗證，待完整 15 分鐘觀測' : !state.isCurrent ? '歷史／最近觀測，僅供參考' : !update ? '無資料' : '基準路段未滿 15 個有效分鐘';
+        return <tr key={rec.key}><td>{rec.name}</td><td>{minuteText(rec.recommendedMinute)}</td><td><strong>{canAdvise ? minuteText(update.recommendedMinute) : '—'}</strong><span className="cell-sub">{note}</span></td></tr>;
+      })}</tbody></table></div></div></div></section>;
 }
 
 const sectorColors = { north: '#3d6fb0', east: '#c8642a', south: '#7a55a8', west: '#2c8063' };
