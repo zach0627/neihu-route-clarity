@@ -1,0 +1,35 @@
+{
+  "name": "neihu-route-clarity",
+  "productName": "內湖園區搞清楚要走的路",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build && node scripts/standalone.mjs && node scripts/security-check.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.mjs",
+    "test:offline": "node tests/offline.mjs",
+    "data:download": "node scripts/download.mjs",
+    "data:sections": "node scripts/download-sections.mjs",
+    "data:reference": "node scripts/reference.mjs",
+    "data:aggregate": "node scripts/aggregate.mjs",
+    "data:update": "node scripts/update.mjs",
+    "security:check": "node scripts/security-check.mjs",
+    "test:ui": "node tests/offline.mjs && node tests/ranking-ui.mjs",
+    "build:pages": "vite build --mode pages --outDir dist-pages --emptyOutDir && node scripts/pages.mjs && node scripts/security-check.mjs",
+    "data:live": "node scripts/live-update.mjs"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.5"
+  }
+}

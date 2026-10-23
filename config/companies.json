@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "description": "彈性上班建議的範本公司。新增公司時只需加一筆：有股票代號者由 scripts/reference.mjs 向臺灣證券交易所 OpenAPI 核對官方住址，再以 TDX 官方地址定位取得座標；計算方法不因公司而改變。",
+  "defaults": {
+    "baselineStart": "08:30",
+    "baselineNote": "示範用的標準上班時間；實際請依各公司規定調整，頁面可切換。",
+    "coverage": 0.8,
+    "roundToMinutes": 15
+  },
+  "companies": [
+    {
+      "id": "compal",
+      "shortName": "仁寶",
+      "name": "仁寶電腦工業股份有限公司",
+      "stockCode": "2324",
+      "address": "台北市內湖區瑞光路581號及581之1號",
+      "geocodeAddress": "臺北市內湖區瑞光路581號",
+      "source": {
+        "title": "臺灣證券交易所 OpenAPI：上市公司基本資料（t187ap03_L）",
+        "url": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
+        "checkedAt": "2026-10-23",
+        "reportDate": "民國115-10-22"
+      }
+    }
+  ]
+}

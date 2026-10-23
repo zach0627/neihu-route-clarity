@@ -1,0 +1,80 @@
+# GitHub Pages version: the same site as dist/index.html, plus scheduled TDX updates.
+# Add repository secrets TDX_CLIENT_ID and TDX_CLIENT_SECRET to enable the API steps; without them the committed snapshot is deployed.
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: snapshot = deploy committed data; daily = download history and recompute; live = one 15-minute live check
+        type: choice
+        options: [snapshot, daily, live]
+        default: snapshot
+  schedule:
+    - cron: '0 2 * * 1-5'            # 10:00 Taipei, after TDX publishes yesterday's history: rolling 30-day snapshot
+    - cron: '0,15,30,45 23 * * 0-4'  # 07:00–07:45 Taipei, Mon–Fri: live 15-minute checks
+    - cron: '0,15,30,45 0 * * 1-5'   # 08:00–08:45 Taipei
+    - cron: '0,15 1 * * 1-5'         # 09:00–09:15 Taipei (each run polls 15 minutes, so the last check ends 09:30)
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+      TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+      MODE: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 2 * * 1-5' && 'daily' || 'live') || inputs.mode || 'snapshot' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Restore downloaded history (morning extracts only)
+        uses: actions/cache/restore@v4
+        with:
+          path: research
+          key: research-v1-${{ github.run_id }}
+          restore-keys: research-v1-
+      - name: Download history and recompute the snapshot
+        if: env.MODE == 'daily' && env.TDX_CLIENT_ID != ''
+        run: node scripts/update.mjs --no-raw
+      - name: Save downloaded history
+        if: env.MODE == 'daily' && env.TDX_CLIENT_ID != ''
+        uses: actions/cache/save@v4
+        with:
+          path: research
+          key: research-v1-${{ github.run_id }}
+      - name: Recompute from cached history
+        if: env.MODE != 'daily' && hashFiles('research/*-download-manifest.json') != ''
+        run: node scripts/aggregate.mjs
+      - name: Live 15-minute check
+        if: env.MODE == 'live' && env.TDX_CLIENT_ID != ''
+        run: node scripts/live-update.mjs --minutes 15
+      - run: npm test
+      - run: npm run build:pages
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

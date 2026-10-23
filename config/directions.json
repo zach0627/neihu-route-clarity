@@ -1,0 +1,624 @@
+{
+  "version": 2,
+  "description": "同一 LinkID 有多支偵測器時的代表優先序（representativePriority）與人工例外（override）。自 v2 起，是否列入往園區排名由 scripts/aggregate.mjs 依官方路段起訖點與官方門牌範圍（config/park-boundary.json、data/reference.json）判定；各筆的 included／reason 是 v1 人工初選的紀錄，僅供對照，不再決定排名範圍。",
+  "park": {
+    "name": "內湖科技園區（瑞光路、洲子街、港墘路核心及其接近道路）",
+    "referencePoint": {
+      "lat": 25.078,
+      "lon": 121.574
+    },
+    "notes": "參考點僅供畫面定位。v2 園區範圍改由臺北市商業處門牌範圍經 TDX 地址定位圍出；v1 的人工初選理由保留於各筆 reason 供對照。",
+    "sources": [
+      {
+        "title": "臺北市商業處：所謂內湖科技園區的範圍為何？",
+        "url": "https://tcooc-co.gov.taipei/News_Content.aspx?n=71C48CD9E02C4FE2&s=15F2700A9201DA0C&sms=14CD04DB05B73A14"
+      },
+      {
+        "title": "臺北市內湖區公所：內湖區志－道路交通",
+        "url": "https://nhdo.gov.taipei/News_Content.aspx?n=14624B66DAE97712&s=8295B68BD73B5A2F&sms=182753B4C8854F02"
+      },
+      {
+        "title": "臺北市都市發展局：110 年公開展覽說明會簡報，第 7 頁園區範圍圖",
+        "url": "https://udd.gov.taipei/assets/k1dQiZL26GxDx5AEG6aXQV/attachs/%E8%AA%AA%E6%98%8E%E6%9C%83%E7%B0%A1%E5%A0%B1.pdf"
+      },
+      {
+        "title": "OpenStreetMap：內湖園區道路連接圖（輔助核對）",
+        "url": "https://www.openstreetmap.org/#map=15/25.0750/121.5760"
+      }
+    ]
+  },
+  "directions": [
+    {
+      "vdId": "VQKWL61",
+      "linkId": "6005320600070A",
+      "included": true,
+      "status": "proposed",
+      "reason": "由內湖東側沿民權東路六段西行，可續往瑞光路口後進入園區東側；此點距入口較遠，含其他西行旅次。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VQKWL61",
+      "linkId": "6005320200090A",
+      "included": false,
+      "status": "excluded",
+      "reason": "民權東路六段東行遠離瑞光路及園區核心入口，未納入本次向園區走廊。"
+    },
+    {
+      "vdId": "VQI4840",
+      "linkId": "6004770600010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "東湖路距園區較遠，需經多次轉向才可能抵達；未核對完整連續進園區路徑，先排除待查。"
+    },
+    {
+      "vdId": "VQI4840",
+      "linkId": "6004770200010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "東湖路距園區較遠，需經多次轉向才可能抵達；未核對完整連續進園區路徑，先排除待查。"
+    },
+    {
+      "vdId": "V6121A0",
+      "linkId": "2000700100400A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道此點在園區南側快速道路／匝道系統；Bearing W 與 RoadDirection N 不同，尚未核定此 LinkID 的出口與可達入口，先排除。"
+    },
+    {
+      "vdId": "VPBTD70",
+      "linkId": "6007200300010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "舊宗路一段東南行朝南京東路方向，與往園區南側的西北行相反。"
+    },
+    {
+      "vdId": "VPBTD70",
+      "linkId": "6007200700020A",
+      "included": true,
+      "status": "proposed",
+      "reason": "舊宗路一段西北行續接舊宗路二段，經民權東路往陽光街／園區南側；區公所列舊宗路為往內科的平面聯絡幹道。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VMSV820",
+      "linkId": "6004160100000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "新明路在園區東南方，需另接舊宗／瑞湖等道路；測點兩方向均無已核對直接園區入口，先排除待查。"
+    },
+    {
+      "vdId": "VMSV820",
+      "linkId": "6004160500000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "新明路在園區東南方，需另接舊宗／瑞湖等道路；測點兩方向均無已核對直接園區入口，先排除待查。"
+    },
+    {
+      "vdId": "VSRT620",
+      "linkId": "6005680200006A",
+      "included": true,
+      "status": "proposed",
+      "reason": "洲子街園區內偏東測點，沿道路東南行可接港墘路核心街廓；屬園區內接近核心的道路流量，含已在園區的旅次。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VSRT620",
+      "linkId": "6005680600006A",
+      "included": false,
+      "status": "excluded",
+      "reason": "洲子街西北行可服務園區西側目的地，但此版核心接近方向採東南行；未有車輛目的地證據，先排除此反向。"
+    },
+    {
+      "vdId": "VQEUU60",
+      "linkId": "6005320600030A",
+      "included": true,
+      "status": "proposed",
+      "reason": "民權東路六段西行測點已近瑞光路口西側，可續往瑞湖街／舊宗路入口接入園區南側；含沿民權路過境旅次。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VQEUU60",
+      "linkId": "6005320200050A",
+      "included": false,
+      "status": "excluded",
+      "reason": "民權東路六段東行可能通往瑞光路東端，但與本版由東側向西接近園區的入口走廊不同；轉向／車道可達性尚待核對。"
+    },
+    {
+      "vdId": "VSGRX60",
+      "linkId": "2000700100130A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道此點座標位於園區西側聯絡系統附近；未確認此 LinkID 為主線或哪一支匝道、出口轉向，先排除。"
+    },
+    {
+      "vdId": "VRGUF00",
+      "linkId": "6005990300018A",
+      "included": false,
+      "status": "excluded",
+      "reason": "瑞光路向東南朝民權東路東側入口外緣，遠離本版港墘／洲子核心接近方向。"
+    },
+    {
+      "vdId": "VRGUF00",
+      "linkId": "6005990700018A",
+      "included": true,
+      "status": "proposed",
+      "reason": "瑞光路東南段向西北，可直接續行至瑞湖街、港墘路及園區核心街廓；依區公所瑞光道路連接與園區圖推定。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VRPSV00",
+      "linkId": "2000700100200A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道南北主線與園區入口匝道尚未完成 LinkID 對照；N 不自動等同進園區，S 亦可能過境，先排除。"
+    },
+    {
+      "vdId": "VRPSV00",
+      "linkId": "2000700000200A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道南北主線與園區入口匝道尚未完成 LinkID 對照；N 不自動等同進園區，S 亦可能過境，先排除。"
+    },
+    {
+      "vdId": "V6140C0",
+      "linkId": "2000901003000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "環東大道為快速道路／匝道系統，位置鄰近園區不代表此方向能在測點後直接進園區；未有出口對照，先排除。"
+    },
+    {
+      "vdId": "V6140C0",
+      "linkId": "2000901103000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "環東大道為快速道路／匝道系統，位置鄰近園區不代表此方向能在測點後直接進園區；未有出口對照，先排除。"
+    },
+    {
+      "vdId": "VSPRA40",
+      "linkId": "6001680000010A",
+      "included": true,
+      "status": "proposed",
+      "reason": "基湖路測點位於瑞光路口南側，北行可接瑞光路／洲子街西側入口；不是將全部南向或北向一律納入。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VSPRA40",
+      "linkId": "6001680400010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "基湖路此點已在瑞光路口南側，南行續向堤頂端；可能服務其他園區目的地，但非本版接近核心方向。"
+    },
+    {
+      "vdId": "V6151C0",
+      "linkId": "2000901004000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "環東大道主線／匝道的出口可達性未核對，無法由 NE／SW 方位直接推定進園區，先排除。"
+    },
+    {
+      "vdId": "V6151C0",
+      "linkId": "2000901104000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "環東大道主線／匝道的出口可達性未核對，無法由 NE／SW 方位直接推定進園區，先排除。"
+    },
+    {
+      "vdId": "VQ6WK40",
+      "linkId": "6003650000030A",
+      "included": false,
+      "status": "excluded",
+      "reason": "成功路二段南北向均需另轉民權東路西行，直行也有大量其他目的地；未核對轉向車道，先排除待查。"
+    },
+    {
+      "vdId": "VQ6WK40",
+      "linkId": "6003650400030A",
+      "included": false,
+      "status": "excluded",
+      "reason": "成功路二段南北向均需另轉民權東路西行，直行也有大量其他目的地；未核對轉向車道，先排除待查。"
+    },
+    {
+      "vdId": "VSPRA60",
+      "linkId": "2000700100080A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道此點 Bearing W、RoadDirection N；主線與基湖出口連接尚待 LinkID／匝道核對，先排除。"
+    },
+    {
+      "vdId": "VQRTE00",
+      "linkId": "6007210400050A",
+      "included": false,
+      "status": "excluded",
+      "reason": "舊宗路二段南行朝民權東路與園區南側外緣，與北行接近核心方向相反。"
+    },
+    {
+      "vdId": "VQRTE00",
+      "linkId": "6007210000040A",
+      "included": true,
+      "status": "proposed",
+      "reason": "舊宗路二段在民權東路北側向北，直接續往陽光街及港墘／瑞光園區街廓，是南側接近園區的平面幹道。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VTNR600",
+      "linkId": "6000910600010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "內湖路一段此西側測點西北行往北安／大直方向，遠離基湖及港墘園區入口。"
+    },
+    {
+      "vdId": "VSNVA60",
+      "linkId": "6004020600003A",
+      "included": true,
+      "status": "proposed",
+      "reason": "文德路向西接內湖路一段／江南街口，可由江南街南接瑞光路或續往港墘路入口；此連接關係有區公所道路說明。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VRPSV70",
+      "linkId": "6007210000010A",
+      "included": true,
+      "status": "proposed",
+      "reason": "舊宗路二段北端向西北接陽光街／港墘路一帶的園區南側；Bearing 為 NW、RoadDirection 為 N，依實際路線彎曲解讀。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VTYXQ60",
+      "linkId": "6003670500020A",
+      "included": false,
+      "status": "excluded",
+      "reason": "成功路四段此西向／西南向仍需另轉成功三段或內湖路、文德路才會抵園區，未核對完整路徑及車道，先排除。"
+    },
+    {
+      "vdId": "V6141E0",
+      "linkId": "2000700000300A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道南向測點在園區南側、方向遠離北方園區入口，且匝道可達性未核對。"
+    },
+    {
+      "vdId": "VQKWL40",
+      "linkId": "6003660000006A",
+      "included": false,
+      "status": "excluded",
+      "reason": "成功路三段南北直行不能辨認後續是否轉文德／陽光／民權東路往園區；缺少轉向流量，先排除待查。"
+    },
+    {
+      "vdId": "VQKWL40",
+      "linkId": "6003660400006A",
+      "included": false,
+      "status": "excluded",
+      "reason": "成功路三段南北直行不能辨認後續是否轉文德／陽光／民權東路往園區；缺少轉向流量，先排除待查。"
+    },
+    {
+      "vdId": "VTARZ40",
+      "linkId": "6005680200003A",
+      "included": true,
+      "status": "proposed",
+      "reason": "洲子街西側測點向東續行園區街廓，接港墘路／瑞光路核心；已在園區內，不能視為首次進園區的車輛數。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VTARZ40",
+      "linkId": "6005680600003A",
+      "included": false,
+      "status": "excluded",
+      "reason": "洲子街西行服務園區西側與出口，與此版向東接近港墘／洲子核心方向相反；不以園區內任意雙向均納入。"
+    },
+    {
+      "vdId": "VQKWL60",
+      "linkId": "6005320600040A",
+      "included": true,
+      "status": "proposed",
+      "reason": "民權東路六段成功路口西側向西，可直接續往瑞光路東側入口；以實際道路連接推定接近園區。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VQKWL60",
+      "linkId": "6005320200060A",
+      "included": false,
+      "status": "excluded",
+      "reason": "民權東路六段東行遠離西方瑞光路入口及園區核心。"
+    },
+    {
+      "vdId": "VQZTP20",
+      "linkId": "6008600200010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "陽光街東行朝成功路及公館山住宅側，與西行穿越瑞光路進入園區方向相反。"
+    },
+    {
+      "vdId": "VQZTP20",
+      "linkId": "6008600600010A",
+      "included": true,
+      "status": "proposed",
+      "reason": "陽光街向西穿越瑞光路，續入園區至舊宗／堤頂一帶；依區公所記載，瑞光以西是園區內輔助道路。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VSGRX40",
+      "linkId": "6005990300003A",
+      "included": true,
+      "status": "proposed",
+      "reason": "瑞光路西北段由基湖方向向東南，續往港墘路及核心街廓；屬園區內接近核心方向，非目的地辨識。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VSGRX40",
+      "linkId": "6005990700003A",
+      "included": false,
+      "status": "excluded",
+      "reason": "瑞光路此西北側測點往西北朝基湖路端，與此版往港墘核心的東南接近方向相反。"
+    },
+    {
+      "vdId": "VRHT660",
+      "linkId": "6005740500010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "港墘路此點已在瑞光核心南側，西南行續往堤頂出口；不能將較北側測點的 SW 規則直接套用。"
+    },
+    {
+      "vdId": "VRHT660",
+      "linkId": "6005740100010A",
+      "included": true,
+      "status": "proposed",
+      "reason": "此港墘路測點接近堤頂端，向東北回到瑞光路／洲子街核心；同路較北側測點採 SW，此處依位置改採 NE。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VSKTL00",
+      "linkId": "6005740500026A",
+      "included": true,
+      "status": "proposed",
+      "reason": "港墘路此點位於瑞光路口北側，西南行續往瑞光路／洲子街核心；區公所列港墘南半段為園區主要幹道。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VSKTL00",
+      "linkId": "6005740100026A",
+      "included": false,
+      "status": "excluded",
+      "reason": "港墘路東北行朝內湖路、住宅側，與此點西南行進入瑞光核心方向相反。"
+    },
+    {
+      "vdId": "VSNRE00",
+      "linkId": "6005990700007A",
+      "included": false,
+      "status": "excluded",
+      "reason": "瑞光路向西北朝基湖端，與此點東南行接近港墘核心方向相反；不代表沒有園區目的地。"
+    },
+    {
+      "vdId": "VSNRE00",
+      "linkId": "6005990300007A",
+      "included": true,
+      "status": "proposed",
+      "reason": "瑞光路位於港墘路核心西北側，向東南續往港墘路核心街廓；含園區內移動及過境車流。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VTVXH20",
+      "linkId": "6003670100013A",
+      "included": false,
+      "status": "excluded",
+      "reason": "成功路四段東北行往內湖東側，遠離園區核心，且無已核對後續園區入口。"
+    },
+    {
+      "vdId": "VT8SZ60",
+      "linkId": "6000910600020A",
+      "included": true,
+      "status": "proposed",
+      "reason": "內湖路一段港墘路口西側沿園區北界西行，可接 360 巷／基湖路等向南園區支路；以北界入口走廊列候選，需確認轉向比例。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VTNR640",
+      "linkId": "6000910200010A",
+      "included": true,
+      "status": "proposed",
+      "reason": "內湖路一段西側測點向東南，續往基湖路／洲子街西側入口；Bearing 為 SE、RoadDirection 為 E，採道路實際走向。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VTXQL00",
+      "linkId": "2000700100000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道西北行靠近北安／大直端，主線及出口尚未完成對照；不能憑位於內湖區就納入。"
+    },
+    {
+      "vdId": "VSXTK20",
+      "linkId": "6000910200020A",
+      "included": true,
+      "status": "proposed",
+      "reason": "內湖路一段北界測點向東可至港墘路口，再向南至瑞光／洲子核心；與 VTHRR20 共用 LinkID，僅擇一代表。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VU5QC60",
+      "linkId": "6000910600000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "內湖路一段園區西北外緣西行朝北安／大直方向，離開園區入口走廊。"
+    },
+    {
+      "vdId": "VS6TI00",
+      "linkId": "6005990700013A",
+      "included": true,
+      "status": "proposed",
+      "reason": "瑞光路位於港墘路口東南側，向西北直接接近港墘／洲子核心；屬實際路段方向推定。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VS6TI00",
+      "linkId": "6005990300013A",
+      "included": false,
+      "status": "excluded",
+      "reason": "瑞光路此核心東南側測點東南行朝民權東路端，遠離港墘／洲子核心。"
+    },
+    {
+      "vdId": "V6350G0",
+      "linkId": "2000900100100A",
+      "included": false,
+      "status": "excluded",
+      "reason": "環東大道西南向快速道路，未核對可進園區出口，先排除；不以道路方位推定目的地。"
+    },
+    {
+      "vdId": "VTZY920",
+      "linkId": "6003670100020A",
+      "included": false,
+      "status": "excluded",
+      "reason": "成功路四段東行／東北行遠離園區核心，先排除。"
+    },
+    {
+      "vdId": "VPMSV40",
+      "linkId": "2000700100210A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道主線此點在園區南側；N 需確認出口才能判定進園區，S 則遠離北方園區；主線／匝道對照未完成，先排除。"
+    },
+    {
+      "vdId": "VPMSV40",
+      "linkId": "2000700000200A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道主線此點在園區南側；N 需確認出口才能判定進園區，S 則遠離北方園區；主線／匝道對照未完成，先排除。"
+    },
+    {
+      "vdId": "VSQVZ20",
+      "linkId": "6004020200006A",
+      "included": false,
+      "status": "excluded",
+      "reason": "文德路東行續往成功路，遠離西側江南／內湖路園區入口。"
+    },
+    {
+      "vdId": "VMVUL60",
+      "linkId": "6001230500010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "南京東路六段西南行朝麥帥／市區方向，遠離園區；亦無轉向進園區證據。"
+    },
+    {
+      "vdId": "VQBUL20",
+      "linkId": "6005320200000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "民權東路六段此點東行可能繞至瑞光東端，但須核對轉向與車道；此版只採可西行續接舊宗北向的園區南側走廊。"
+    },
+    {
+      "vdId": "VQBUL20",
+      "linkId": "6005320600000A",
+      "included": true,
+      "status": "proposed",
+      "reason": "民權東路六段此點西行可續往舊宗路二段北轉，接園區南側；不能據此判定所有西行車實際在此轉入。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VMVUL20",
+      "linkId": "6001230100000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "南京東路六段東北行可能再轉舊宗路，但直行亦可往南港；缺少轉向／車道連接證據，先排除待查。"
+    },
+    {
+      "vdId": "VT5QV00",
+      "linkId": "2000700100060A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道西北端主線方向與基湖路／瑞光匝道的可達性尚待核對，N／S 均不自動視為進園區。"
+    },
+    {
+      "vdId": "VT5QV00",
+      "linkId": "2000700000060A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道西北端主線方向與基湖路／瑞光匝道的可達性尚待核對，N／S 均不自動視為進園區。"
+    },
+    {
+      "vdId": "V6150C1",
+      "linkId": "2000900000200A",
+      "included": false,
+      "status": "excluded",
+      "reason": "環東大道東北行快速道路，未核對測點後能抵園區的出口，先排除。"
+    },
+    {
+      "vdId": "VSQYA00",
+      "linkId": "6008330700020A",
+      "included": false,
+      "status": "excluded",
+      "reason": "金湖路位於園區東方，需多次轉向才會抵園區；N／S 的道路方位不足以確定接近園區，先排除。"
+    },
+    {
+      "vdId": "VSQYA00",
+      "linkId": "6008330300030A",
+      "included": false,
+      "status": "excluded",
+      "reason": "金湖路位於園區東方，需多次轉向才會抵園區；N／S 的道路方位不足以確定接近園區，先排除。"
+    },
+    {
+      "vdId": "VRHT600",
+      "linkId": "2000700100180A",
+      "included": false,
+      "status": "excluded",
+      "reason": "堤頂大道六車道主線位於港墘端附近，但動態／靜態車道覆蓋與匝道對照尚待確認；先排除，避免把過境主線稱為進園區。"
+    },
+    {
+      "vdId": "VTHRR00",
+      "linkId": "6000910600020A",
+      "included": true,
+      "status": "proposed",
+      "reason": "內湖路一段園區北界西行可續往基湖路入口；與 VT8SZ60 共用 LinkID，優先採靠港墘側 VT8SZ60 代表，兩點不相加。",
+      "representativePriority": 20
+    },
+    {
+      "vdId": "VTHRR20",
+      "linkId": "6000910200020A",
+      "included": true,
+      "status": "proposed",
+      "reason": "內湖路一段沿北界向東可續往港墘路南轉進園區；與 VSXTK20 共用 LinkID，優先採靠港墘路口的 VSXTK20 代表。",
+      "representativePriority": 20
+    },
+    {
+      "vdId": "V6340G1",
+      "linkId": "2000900100140A",
+      "included": false,
+      "status": "excluded",
+      "reason": "環東大道西南向主線，未核對園區出口與車道，先排除。"
+    },
+    {
+      "vdId": "VRVTS00",
+      "linkId": "6006010000000A",
+      "included": true,
+      "status": "proposed",
+      "reason": "瑞湖街北端向北可直接接瑞光路後往核心街廓；已在園區內，列園區接近核心方向候選。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VRVTS00",
+      "linkId": "6006010400000A",
+      "included": false,
+      "status": "excluded",
+      "reason": "瑞湖街南行離開瑞光路核心，朝園區南端；與本版北行接近核心的方向相反。"
+    },
+    {
+      "vdId": "VRFTM40",
+      "linkId": "6006010400020A",
+      "included": false,
+      "status": "excluded",
+      "reason": "瑞湖街此南側測點南行朝民權東路／涵洞端，遠離瑞光核心。"
+    },
+    {
+      "vdId": "VRFTM40",
+      "linkId": "6006010000020A",
+      "included": true,
+      "status": "proposed",
+      "reason": "瑞湖街南側測點向北續接瑞光路，為園區南側接近核心的道路方向；不可與北端 VRVTS00 累加為同一路總量。",
+      "representativePriority": 10
+    },
+    {
+      "vdId": "VSHZU60",
+      "linkId": "6003680700010A",
+      "included": false,
+      "status": "excluded",
+      "reason": "成功路五段北向／西北向在園區東側，仍需其他轉向道路；缺少完整路徑核對，先排除待查。"
+    }
+  ]
+}

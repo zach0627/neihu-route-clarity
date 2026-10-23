@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-pages/
+data/live.json
+.env
+.env.*
+!.env.example
+.credentials/
+research/
+data/raw/
+data/cache/
+artifacts/
+*.log
+.DS_Store
+.omc/
+.claude/
